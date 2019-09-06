@@ -58,7 +58,8 @@ class DataManager:
             for bank, bank_info in db_parse_dict.items():
                 if bank.get(ParseBank.identifier) in email_body_text:
                     db_email = DBEntity(Email)
-                    email_date_time = datetime.datetime.strptime(email_message['date'], bank.get(ParseBank.date_format))
+                    modified_date = email_message['date'].split(' -', 1)[0].split(' +', 1)[0]
+                    email_date_time = datetime.datetime.strptime(modified_date, bank.get(ParseBank.date_format))
                     if bank.get(ParseBank.localize_date_format):
                         email_date_time = email_date_time.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
                     db_email.set(Email.date_time, email_date_time)
