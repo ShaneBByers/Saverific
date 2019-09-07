@@ -20,7 +20,8 @@ class DataManager:
                                               Constants.email_username.value,
                                               Constants.email_password.value,
                                               Constants.email_source_mailbox.value,
-                                              Constants.email_dest_mailbox.value)
+                                              Constants.email_dest_mailbox.value,
+                                              Constants.email_error_mailbox.value)
 
     def get_db_parse_info(self):
         parse_banks_select = DBEntity(ParseBank)
@@ -99,4 +100,4 @@ class DataManager:
         self.db_manager.commit()
 
         self.email_manager.move_emails(parsed_emails)
-        self.email_manager.move_emails(not_parsed_emails, 'Error')
+        self.email_manager.move_emails(not_parsed_emails, True)
