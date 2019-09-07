@@ -9,5 +9,6 @@ class Constants(Enum):
     db_username = ""
     db_password = ""
     db_name = ""
-    email_source_mailbox = ''
-    email_dest_mailbox = ''
+    email_source_mailbox = ""
+    email_dest_mailbox = ""
+    email_error_mailbox = ""
