@@ -34,4 +34,4 @@ class FileDataManager:
         self.logger.info("Closed file.")
 
     def __del__(self):
-        self.close()
+        self.file.close()

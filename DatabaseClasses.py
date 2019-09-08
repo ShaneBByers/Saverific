@@ -8,7 +8,7 @@ class Banks(Enum):
         return 'BANKS'
 
     @classmethod
-    def auto_increment(cls):
+    def auto_increments(cls):
         return []
 
     bank_id = 'BANK_ID'
@@ -22,7 +22,7 @@ class Cards(Enum):
         return 'CARDS'
 
     @classmethod
-    def auto_increment(cls):
+    def auto_increments(cls):
         return []
 
     card_id = 'CARD_ID'
@@ -39,7 +39,7 @@ class Emails(Enum):
         return 'EMAILS'
 
     @classmethod
-    def auto_increment(cls):
+    def auto_increments(cls):
         return ['EMAIL_ID']
 
     email_id = 'EMAIL_ID'
@@ -57,12 +57,12 @@ class ParseBanks(Enum):
         return 'PARSE_BANKS'
 
     @classmethod
-    def auto_increment(cls):
+    def auto_increments(cls):
         return []
 
-    bank_id = 'BANK_ID'
+    parse_id = 'PARSE_ID'
     identifier = 'IDENTIFIER'
-    component_id = 'COMPONENT_ID'
+    bank_id = 'BANK_ID'
     date_format = 'DATE_FORMAT'
     localize_date_time = 'LOCALIZE_DATE_TIME'
 
@@ -74,11 +74,10 @@ class ParseComponents(Enum):
         return 'PARSE_COMPONENTS'
 
     @classmethod
-    def auto_increment(cls):
-        return ['ID']
+    def auto_increments(cls):
+        return []
 
-    id = 'ID'
-    component_id = 'COMPONENT_ID'
+    parse_id = 'PARSE_ID'
     name = 'NAME'
     type = 'TYPE'
     prefix = 'PREFIX'

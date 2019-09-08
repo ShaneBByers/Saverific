@@ -35,7 +35,7 @@ class DataManager:
 
         for parse_bank in parse_banks:
             parse_components_select = DBEntity(ParseComponents)
-            parse_components_select.add_where(ParseComponents.component_id, parse_bank.get(ParseBanks.component_id))
+            parse_components_select.add_where(ParseComponents.parse_id, parse_bank.get(ParseBanks.parse_id))
             parse_components = self.db_manager.select_all(parse_components_select)
             parse_banks_dict[parse_bank] = parse_components
 
@@ -53,9 +53,7 @@ class DataManager:
         return emails
 
     def parse_emails(self):
-        db_parse_dict = self.get_db_parse_info()
-        db_cards = self.get_db_cards()
-        emails = self.get_unread_emails()
+
 
         types = {'str': str, 'int': int, 'float': float}
 
@@ -63,48 +61,53 @@ class DataManager:
         parsed_emails = []
         not_parsed_emails = []
 
-        for email in emails:
-            for bank, bank_info in db_parse_dict.items():
-                if bank.get(ParseBanks.identifier) in email.text:
-                    self.logger.info("Found email matching bank with ID " + str(bank.get(ParseBanks.bank_id)) + ".")
-                    db_email = DBEntity(Emails)
-                    modified_date = email.date.split(' -', 1)[0].split(' +', 1)[0]
-                    email_date_time = datetime.datetime.strptime(modified_date, bank.get(ParseBanks.date_format))
-                    if bank.get(ParseBanks.localize_date_format):
-                        email_date_time = email_date_time.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
-                    db_email.set(Emails.date_time, email_date_time)
-                    parsed = True
-                    for component in bank_info:
-                        for col in Emails:
-                            if component.get(ParseComponents.name) == col.value or \
-                                    (component.get(ParseComponents.name) == 'LAST_FOUR' and col.value == 'CARD_ID'):
-                                if component.get(ParseComponents.prefix) in email.text and \
-                                        component.get(ParseComponents.postfix).replace('\\n', '\n') in email.text:
-                                    val = types[component.get(ParseComponents.type)](email.text
-                                                                                    .split(component.get(ParseComponents.prefix), 1)[1]
-                                                                                    .strip()
-                                                                                    .split(component.get(ParseComponents.postfix).replace('\\n', '\n'), 1)[0]
-                                                                                    .strip())
-                                    if component.get(ParseComponents.name) == 'LAST_FOUR':
-                                        for card in db_cards:
-                                            if card.get(Cards.last_four) == val:
-                                                db_email.set(Cards.card_id, card.get(Cards.card_id))
-                                    else:
-                                        db_email.set(col, val)
-                                else:
-                                    parsed = False
-                    if parsed:
-                        insert_emails.append(db_email)
-                        parsed_emails.append(email)
-                    else:
-                        not_parsed_emails.append(email)
+        emails = self.get_unread_emails()
 
-        for insert_email in insert_emails:
-            self.db_manager.insert(insert_email, False)
-        self.db_manager.commit()
+        if len(emails) > 0:
+            db_parse_dict = self.get_db_parse_info()
+            db_cards = self.get_db_cards()
+            for email in emails:
+                for bank, bank_info in db_parse_dict.items():
+                    if bank.get(ParseBanks.identifier) in email.text:
+                        self.logger.info("Found email matching bank with ID " + str(bank.get(ParseBanks.bank_id)) + ".")
+                        db_email = DBEntity(Emails)
+                        modified_date = email.date.split(' -', 1)[0].split(' +', 1)[0]
+                        email_date_time = datetime.datetime.strptime(modified_date, bank.get(ParseBanks.date_format))
+                        if bank.get(ParseBanks.localize_date_time):
+                            email_date_time = email_date_time.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
+                        db_email.set(Emails.date_time, email_date_time)
+                        parsed = True
+                        for component in bank_info:
+                            for col in Emails:
+                                if component.get(ParseComponents.name) == col.value or \
+                                        (component.get(ParseComponents.name) == Cards.last_four.value and col.value == Emails.card_id.value):
+                                    if component.get(ParseComponents.prefix) in email.text and \
+                                            component.get(ParseComponents.postfix).replace('\\n', '\n') in email.text:
+                                        val = types[component.get(ParseComponents.type)](email.text
+                                                                                        .split(component.get(ParseComponents.prefix), 1)[1]
+                                                                                        .strip()
+                                                                                        .split(component.get(ParseComponents.postfix).replace('\\n', '\n'), 1)[0]
+                                                                                        .strip())
+                                        if component.get(ParseComponents.name) == Cards.last_four.value:
+                                            for card in db_cards:
+                                                if card.get(Cards.last_four) == val:
+                                                    db_email.set(Cards.card_id, card.get(Cards.card_id))
+                                        else:
+                                            db_email.set(col, val)
+                                    elif component.get(ParseComponents.name) == Emails.merchant_name.value:
+                                        parsed = False
+                        if parsed:
+                            insert_emails.append(db_email)
+                            parsed_emails.append(email)
+                        else:
+                            not_parsed_emails.append(email)
 
-        self.email_manager.move_emails(parsed_emails)
-        self.email_manager.move_emails(not_parsed_emails, True)
+            for insert_email in insert_emails:
+                self.db_manager.insert(insert_email, False)
+            self.db_manager.commit()
+
+            self.email_manager.move_emails(parsed_emails)
+            self.email_manager.move_emails(not_parsed_emails, True)
 
     def update_classes_file(self):
         table_info = self.db_manager.get_table_information()
@@ -123,7 +126,7 @@ class DataManager:
             self.file_manager.write_line("return '" + table_name + "'", tabs=2, lines=2)
 
             self.file_manager.write_line("@classmethod", tabs=1)
-            self.file_manager.write_line("def auto_increment(cls):", tabs=1)
+            self.file_manager.write_line("def auto_increments(cls):", tabs=1)
             self.file_manager.write("return [", tabs=2)
             auto_increment_list = []
             for column in columns:
