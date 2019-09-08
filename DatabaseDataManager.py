@@ -55,3 +55,6 @@ class DatabaseDataManager:
 
     def commit(self):
         self.connector.commit_execute()
+
+    def get_table_information(self):
+        return self.connector.get_table_information()

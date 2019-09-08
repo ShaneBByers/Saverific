@@ -1,6 +1,6 @@
 import mysql.connector
 import logging
-from DatabaseClasses import DBEntity
+from DatabaseEntity import DBEntity
 
 
 class DatabaseConnector:
@@ -89,3 +89,16 @@ class DatabaseConnector:
     def commit_execute(self):
         self.database.commit()
         self.logger.info("Committed execution.")
+
+    def get_table_information(self):
+        self.select_statement = "SHOW TABLES;"
+        self.cursor.execute(self.select_statement)
+        tables_dict = self.cursor.fetchall()
+        tables = {}
+        for table_dict in tables_dict:
+            for schema, table_name in table_dict.items():
+                self.select_statement = "DESCRIBE " + table_name
+                self.cursor.execute(self.select_statement)
+                table_description_dict = self.cursor.fetchall()
+                tables[table_name] = table_description_dict
+        return tables
