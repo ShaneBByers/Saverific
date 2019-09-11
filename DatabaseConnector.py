@@ -60,7 +60,7 @@ class DatabaseConnector:
     def execute_insert(self):
         row_count = self.cursor.execute(self.insert_statement)
         self.logger.info("Executed statement: '" + self.insert_statement + "' Row Count: " + str(row_count))
-        return row_count
+        return self.cursor.lastrowid
 
     def create_update(self, entity):
         self.update_statement = "UPDATE "
@@ -72,7 +72,7 @@ class DatabaseConnector:
     def execute_update(self):
         row_count = self.cursor.execute(self.update_statement)
         self.logger.info("Executed statement: '" + self.update_statement + "' Row Count: " + str(row_count))
-        return row_count
+        return self.cursor.lastrowid
 
     def create_delete(self, entity):
         self.delete_statement = "DELETE FROM "
@@ -84,11 +84,12 @@ class DatabaseConnector:
     def execute_delete(self):
         row_count = self.cursor.execute(self.delete_statement)
         self.logger.info("Executed statement: '" + self.delete_statement + "' Row Count: " + str(row_count))
-        return row_count
+        return self.cursor.lastrowid
 
     def commit_execute(self):
         self.database.commit()
         self.logger.info("Committed execution.")
+        return self.cursor.lastrowid
 
     def get_table_information(self):
         self.select_statement = "SHOW TABLES;"

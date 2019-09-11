@@ -8,7 +8,7 @@ logger_obj = Logger(logger_name)
 logger = logging.getLogger(logger_name)
 
 data_manager = DataManager(logger_name)
-data_manager.update_classes_file()
+# data_manager.update_classes_file()
 data_manager.parse_emails()
 
 logger.info("DONE")

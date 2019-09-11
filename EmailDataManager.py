@@ -12,6 +12,5 @@ class EmailDataManager:
     def get_emails(self):
         return self.email_connector.get_messages()
 
-    def move_emails(self, messages, error=False):
-        for message in messages:
-            self.email_connector.move_message(message, error)
+    def move_email(self, message, error=False):
+        self.email_connector.move_message(message, error)

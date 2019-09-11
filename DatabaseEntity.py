@@ -85,7 +85,7 @@ class DBEntity:
                 if isinstance(self._record[col], str):
                     return_string += "\"" + str(self._record[col]) + "\", "
                 elif isinstance(self._record[col], datetime.datetime):
-                    return_string += "\"" + self._record[col].strftime('%Y-%m-%d %H:%M:%S') + "\""
+                    return_string += "\"" + self._record[col].strftime('%Y-%m-%d %H:%M:%S') + "\", "
                 else:
                     return_string += str(self._record[col]) + ", "
         else:

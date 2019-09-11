@@ -27,6 +27,21 @@ class DataManager:
 
         self.file_manager = FileDataManager(logger_name)
 
+    @staticmethod
+    def get_email_component(text, component):
+        types = {'str': str, 'int': int, 'float': float}
+
+        val = None
+
+        if component.get(ParseComponents.prefix) in text and \
+                component.get(ParseComponents.postfix).replace('\\n', '\n') in text:
+            val = types[component.get(ParseComponents.type)](text
+                                                             .split(component.get(ParseComponents.prefix), 1)[1]
+                                                             .strip()
+                                                             .split(component.get(ParseComponents.postfix).replace('\\n', '\n'), 1)[0]
+                                                             .strip())
+        return val
+
     def get_db_parse_info(self):
         parse_banks_select = DBEntity(ParseBanks)
         parse_banks = self.db_manager.select_all(parse_banks_select)
@@ -41,11 +56,11 @@ class DataManager:
 
         return parse_banks_dict
 
-    def get_db_cards(self):
-        cards_select = DBEntity(Cards)
-        cards = self.db_manager.select_all(cards_select)
+    def get_db_accounts(self):
+        accounts_select = DBEntity(Accounts)
+        accounts = self.db_manager.select_all(accounts_select)
 
-        return cards
+        return accounts
 
     def get_unread_emails(self):
         emails = self.email_manager.get_emails()
@@ -53,61 +68,75 @@ class DataManager:
         return emails
 
     def parse_emails(self):
-
-
-        types = {'str': str, 'int': int, 'float': float}
-
-        insert_emails = []
-        parsed_emails = []
-        not_parsed_emails = []
-
         emails = self.get_unread_emails()
 
         if len(emails) > 0:
+            email_types_select = DBEntity(EmailTypes)
+            email_types = self.db_manager.select_all(email_types_select)
             db_parse_dict = self.get_db_parse_info()
-            db_cards = self.get_db_cards()
+            db_accounts = self.get_db_accounts()
             for email in emails:
                 for bank, bank_info in db_parse_dict.items():
                     if bank.get(ParseBanks.identifier) in email.text:
                         self.logger.info("Found email matching bank with ID " + str(bank.get(ParseBanks.bank_id)) + ".")
-                        db_email = DBEntity(Emails)
-                        modified_date = email.date.split(' -', 1)[0].split(' +', 1)[0]
-                        email_date_time = datetime.datetime.strptime(modified_date, bank.get(ParseBanks.date_format))
-                        if bank.get(ParseBanks.localize_date_time):
-                            email_date_time = email_date_time.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
-                        db_email.set(Emails.date_time, email_date_time)
-                        parsed = True
-                        for component in bank_info:
+
+                        email_text = email.text
+                        DetailsTable = None
+                        for email_type in email_types:
+                            if bank.get(ParseBanks.email_type_id) == email_type.get(EmailTypes.email_type_id):
+                                if email_type.get(EmailTypes.is_email_html):
+                                    email_text = email.html
+                                if email_type.get(EmailTypes.table) == Transactions.table_name():
+                                    DetailsTable = Transactions
+                                elif email_type.get(EmailTypes.table) == Balances.table_name():
+                                    DetailsTable = Balances
+                                break
+
+                        if DetailsTable is not None:
+                            db_email = DBEntity(Emails)
+                            for component in bank_info:
+                                if component.get(ParseComponents.name) == Accounts.account_number.value:
+                                    last_four = self.get_email_component(email_text, component)
+                                    for db_account in db_accounts:
+                                        if db_account.get(Accounts.account_number) == last_four:
+                                            db_email.set(Emails.account_id, db_account.get(Accounts.account_id))
+                                            break
+                                    break
+
+                            modified_date = email.date.split(' -', 1)[0].split(' +', 1)[0]
+                            email_date_time = datetime.datetime.strptime(modified_date, bank.get(ParseBanks.date_format))
+                            if bank.get(ParseBanks.localize_date_time):
+                                email_date_time = email_date_time.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
+                            db_email.set(Emails.date_time, email_date_time)
+
+                            db_email.set(Emails.email_type_id, bank.get(ParseBanks.email_type_id))
+
+                            db_email_details = DBEntity(DetailsTable)
+                            for component in bank_info:
+                                for col in DetailsTable:
+                                    if component.get(ParseComponents.name) == col.value:
+                                        val = self.get_email_component(email_text, component)
+                                        db_email_details.set(col, val)
+
+                            parsed = True
                             for col in Emails:
-                                if component.get(ParseComponents.name) == col.value or \
-                                        (component.get(ParseComponents.name) == Cards.last_four.value and col.value == Emails.card_id.value):
-                                    if component.get(ParseComponents.prefix) in email.text and \
-                                            component.get(ParseComponents.postfix).replace('\\n', '\n') in email.text:
-                                        val = types[component.get(ParseComponents.type)](email.text
-                                                                                        .split(component.get(ParseComponents.prefix), 1)[1]
-                                                                                        .strip()
-                                                                                        .split(component.get(ParseComponents.postfix).replace('\\n', '\n'), 1)[0]
-                                                                                        .strip())
-                                        if component.get(ParseComponents.name) == Cards.last_four.value:
-                                            for card in db_cards:
-                                                if card.get(Cards.last_four) == val:
-                                                    db_email.set(Cards.card_id, card.get(Cards.card_id))
-                                        else:
-                                            db_email.set(col, val)
-                                    elif component.get(ParseComponents.name) == Emails.merchant_name.value:
-                                        parsed = False
-                        if parsed:
-                            insert_emails.append(db_email)
-                            parsed_emails.append(email)
-                        else:
-                            not_parsed_emails.append(email)
+                                if db_email.get(col) is None and col.value in Emails.not_nulls():
+                                    parsed = False
+                            for col in DetailsTable:
+                                if db_email_details.get(col) is None and \
+                                        col.value != Emails.email_id.value and \
+                                        col.value in DetailsTable.not_nulls():
+                                    parsed = False
 
-            for insert_email in insert_emails:
-                self.db_manager.insert(insert_email, False)
+                            if parsed:
+                                db_email_id = self.db_manager.insert(db_email, False)
+                                db_email_details.set(DetailsTable.email_id, db_email_id)
+                                self.db_manager.insert(db_email_details, False)
+                                self.email_manager.move_email(email)
+                            else:
+                                self.email_manager.move_email(email, True)
+
             self.db_manager.commit()
-
-            self.email_manager.move_emails(parsed_emails)
-            self.email_manager.move_emails(not_parsed_emails, True)
 
     def update_classes_file(self):
         table_info = self.db_manager.get_table_information()
@@ -125,18 +154,34 @@ class DataManager:
             self.file_manager.write_line("def table_name(cls):", tabs=1)
             self.file_manager.write_line("return '" + table_name + "'", tabs=2, lines=2)
 
-            self.file_manager.write_line("@classmethod", tabs=1)
-            self.file_manager.write_line("def auto_increments(cls):", tabs=1)
-            self.file_manager.write("return [", tabs=2)
             auto_increment_list = []
+            not_null_list = []
             for column in columns:
                 if 'auto_increment' in column['Extra']:
                     auto_increment_list.append(column['Field'])
+                elif 'NO' in column['Null']:
+                    not_null_list.append(column['Field'])
+
+            self.file_manager.write_line("@classmethod", tabs=1)
+            self.file_manager.write_line("def auto_increments(cls):", tabs=1)
+            self.file_manager.write("return [", tabs=2)
+
             if len(auto_increment_list) > 0:
                 for column in auto_increment_list[:-1]:
                     self.file_manager.write("'" + column + "', ")
                 else:
                     self.file_manager.write("'" + auto_increment_list[-1] + "'")
+            self.file_manager.write_line("]", lines=2)
+
+            self.file_manager.write_line("@classmethod", tabs=1)
+            self.file_manager.write_line("def not_nulls(cls):", tabs=1)
+            self.file_manager.write("return [", tabs=2)
+
+            if len(not_null_list) > 0:
+                for column in not_null_list[:-1]:
+                    self.file_manager.write("'" + column + "', ")
+                else:
+                    self.file_manager.write("'" + not_null_list[-1] + "'")
             self.file_manager.write_line("]")
 
             for column in columns:

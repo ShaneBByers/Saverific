@@ -32,6 +32,3 @@ class FileDataManager:
     def close(self):
         self.file.close()
         self.logger.info("Closed file.")
-
-    def __del__(self):
-        self.file.close()

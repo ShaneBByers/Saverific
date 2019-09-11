@@ -1,6 +1,48 @@
 from enum import Enum
 
 
+class Accounts(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'ACCOUNTS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['ACCOUNT_ID', 'NICKNAME', 'NAME', 'ACCOUNT_NUMBER', 'BALANCE', 'IS_CREDIT']
+
+    account_id = 'ACCOUNT_ID'
+    bank_id = 'BANK_ID'
+    nickname = 'NICKNAME'
+    name = 'NAME'
+    account_number = 'ACCOUNT_NUMBER'
+    balance = 'BALANCE'
+    is_credit = 'IS_CREDIT'
+    limit = 'LIMIT'
+
+
+class Balances(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'BALANCES'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['EMAIL_ID', 'BALANCE']
+
+    email_id = 'EMAIL_ID'
+    balance = 'BALANCE'
+
+
 class Banks(Enum):
 
     @classmethod
@@ -11,25 +53,12 @@ class Banks(Enum):
     def auto_increments(cls):
         return []
 
+    @classmethod
+    def not_nulls(cls):
+        return ['BANK_ID', 'NAME']
+
     bank_id = 'BANK_ID'
     name = 'NAME'
-
-
-class Cards(Enum):
-
-    @classmethod
-    def table_name(cls):
-        return 'CARDS'
-
-    @classmethod
-    def auto_increments(cls):
-        return []
-
-    card_id = 'CARD_ID'
-    bank_id = 'BANK_ID'
-    nickname = 'NICKNAME'
-    name = 'NAME'
-    last_four = 'LAST_FOUR'
 
 
 class Emails(Enum):
@@ -42,12 +71,33 @@ class Emails(Enum):
     def auto_increments(cls):
         return ['EMAIL_ID']
 
+    @classmethod
+    def not_nulls(cls):
+        return ['ACCOUNT_ID', 'DATE_TIME']
+
     email_id = 'EMAIL_ID'
-    card_id = 'CARD_ID'
-    amount = 'AMOUNT'
-    merchant_name = 'MERCHANT_NAME'
-    merchant_location = 'MERCHANT_LOCATION'
+    account_id = 'ACCOUNT_ID'
     date_time = 'DATE_TIME'
+    email_type_id = 'EMAIL_TYPE_ID'
+
+
+class EmailTypes(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'EMAIL_TYPES'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['EMAIL_TYPE_ID', 'TABLE', 'IS_EMAIL_HTML']
+
+    email_type_id = 'EMAIL_TYPE_ID'
+    table = 'TABLE'
+    is_email_html = 'IS_EMAIL_HTML'
 
 
 class ParseBanks(Enum):
@@ -60,11 +110,16 @@ class ParseBanks(Enum):
     def auto_increments(cls):
         return []
 
+    @classmethod
+    def not_nulls(cls):
+        return ['PARSE_ID', 'IDENTIFIER', 'BANK_ID', 'DATE_FORMAT', 'LOCALIZE_DATE_TIME']
+
     parse_id = 'PARSE_ID'
     identifier = 'IDENTIFIER'
     bank_id = 'BANK_ID'
     date_format = 'DATE_FORMAT'
     localize_date_time = 'LOCALIZE_DATE_TIME'
+    email_type_id = 'EMAIL_TYPE_ID'
 
 
 class ParseComponents(Enum):
@@ -77,8 +132,32 @@ class ParseComponents(Enum):
     def auto_increments(cls):
         return []
 
+    @classmethod
+    def not_nulls(cls):
+        return ['PARSE_ID']
+
     parse_id = 'PARSE_ID'
     name = 'NAME'
     type = 'TYPE'
     prefix = 'PREFIX'
     postfix = 'POSTFIX'
+
+
+class Transactions(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'TRANSACTIONS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['EMAIL_ID']
+
+    email_id = 'EMAIL_ID'
+    amount = 'AMOUNT'
+    merchant_name = 'MERCHANT_NAME'
+    merchant_location = 'MERCHANT_LOCATION'
