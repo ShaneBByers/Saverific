@@ -13,16 +13,16 @@ class Accounts(Enum):
 
     @classmethod
     def not_nulls(cls):
-        return ['ACCOUNT_ID', 'NICKNAME', 'NAME', 'ACCOUNT_NUMBER', 'BALANCE', 'IS_CREDIT']
+        return ['ACCOUNT_ID', 'NICKNAME', 'ACCOUNT_NAME', 'ACCOUNT_NUMBER', 'BALANCE', 'IS_CREDIT']
 
     account_id = 'ACCOUNT_ID'
     bank_id = 'BANK_ID'
     nickname = 'NICKNAME'
-    name = 'NAME'
+    account_name = 'ACCOUNT_NAME'
     account_number = 'ACCOUNT_NUMBER'
     balance = 'BALANCE'
     is_credit = 'IS_CREDIT'
-    limit = 'LIMIT'
+    credit_limit = 'CREDIT_LIMIT'
 
 
 class Balances(Enum):

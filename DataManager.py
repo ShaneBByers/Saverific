@@ -29,17 +29,19 @@ class DataManager:
 
     @staticmethod
     def get_email_component(text, component):
-        types = {'str': str, 'int': int, 'float': float}
+        types = {'str': (str, '', ''), 'int': (int, ',', ''), 'float': (float, ',', '')}
 
         val = None
 
         if component.get(ParseComponents.prefix) in text and \
-                component.get(ParseComponents.postfix).replace('\\n', '\n') in text:
-            val = types[component.get(ParseComponents.type)](text
-                                                             .split(component.get(ParseComponents.prefix), 1)[1]
-                                                             .strip()
-                                                             .split(component.get(ParseComponents.postfix).replace('\\n', '\n'), 1)[0]
-                                                             .strip())
+                component.get(ParseComponents.postfix).replace('\\r', '').replace('\\n', '\n') in text:
+            current_type = types[component.get(ParseComponents.type)]
+            str_val = (text
+                       .split(component.get(ParseComponents.prefix), 1)[1]
+                       .strip()
+                       .split(component.get(ParseComponents.postfix).replace('\\r', '').replace('\\n', '\n'), 1)[0]
+                       .strip()).replace(current_type[1], current_type[2])
+            val = current_type[0](str_val)
         return val
 
     def get_db_parse_info(self):
@@ -76,22 +78,25 @@ class DataManager:
             db_parse_dict = self.get_db_parse_info()
             db_accounts = self.get_db_accounts()
             for email in emails:
+                found_match = False
                 for bank, bank_info in db_parse_dict.items():
-                    if bank.get(ParseBanks.identifier) in email.text:
+                    email_text = email.text
+                    DetailsTable = None
+                    for email_type in email_types:
+                        if bank.get(ParseBanks.email_type_id) == email_type.get(EmailTypes.email_type_id):
+                            if email_type.get(EmailTypes.is_email_html):
+                                email_text = email.html
+                            if email_type.get(EmailTypes.table) == Transactions.table_name():
+                                DetailsTable = Transactions
+                            elif email_type.get(EmailTypes.table) == Balances.table_name():
+                                DetailsTable = Balances
+                            break
+
+                    account = None
+
+                    if bank.get(ParseBanks.identifier) in email_text:
+                        found_match = True
                         self.logger.info("Found email matching bank with ID " + str(bank.get(ParseBanks.bank_id)) + ".")
-
-                        email_text = email.text
-                        DetailsTable = None
-                        for email_type in email_types:
-                            if bank.get(ParseBanks.email_type_id) == email_type.get(EmailTypes.email_type_id):
-                                if email_type.get(EmailTypes.is_email_html):
-                                    email_text = email.html
-                                if email_type.get(EmailTypes.table) == Transactions.table_name():
-                                    DetailsTable = Transactions
-                                elif email_type.get(EmailTypes.table) == Balances.table_name():
-                                    DetailsTable = Balances
-                                break
-
                         if DetailsTable is not None:
                             db_email = DBEntity(Emails)
                             for component in bank_info:
@@ -99,6 +104,7 @@ class DataManager:
                                     last_four = self.get_email_component(email_text, component)
                                     for db_account in db_accounts:
                                         if db_account.get(Accounts.account_number) == last_four:
+                                            account = db_account
                                             db_email.set(Emails.account_id, db_account.get(Accounts.account_id))
                                             break
                                     break
@@ -112,11 +118,22 @@ class DataManager:
                             db_email.set(Emails.email_type_id, bank.get(ParseBanks.email_type_id))
 
                             db_email_details = DBEntity(DetailsTable)
+                            limit = None
                             for component in bank_info:
-                                for col in DetailsTable:
-                                    if component.get(ParseComponents.name) == col.value:
-                                        val = self.get_email_component(email_text, component)
-                                        db_email_details.set(col, val)
+                                if component.get(ParseComponents.name) == Accounts.credit_limit.value:
+                                    limit = self.get_email_component(email_text, component)
+                                else:
+                                    for col in DetailsTable:
+                                        if component.get(ParseComponents.name) == col.value:
+                                            val = self.get_email_component(email_text, component)
+                                            db_email_details.set(col, val)
+
+                            if limit is not None and account is not None:
+                                limit += db_email_details.get(DetailsTable.balance)
+                                limit = int(round(float(limit)))
+                                account.set(Accounts.credit_limit, limit)
+                                account.add_where(Accounts.account_id, account.get(Accounts.account_id))
+                                self.db_manager.update(account)
 
                             parsed = True
                             for col in Emails:
@@ -131,11 +148,12 @@ class DataManager:
                             if parsed:
                                 db_email_id = self.db_manager.insert(db_email, False)
                                 db_email_details.set(DetailsTable.email_id, db_email_id)
-                                self.db_manager.insert(db_email_details, False)
+                                self.db_manager.insert(db_email_details)
                                 self.email_manager.move_email(email)
                             else:
                                 self.email_manager.move_email(email, True)
-
+                if not found_match:
+                    self.email_manager.move_email(email, True)
             self.db_manager.commit()
 
     def update_classes_file(self):
