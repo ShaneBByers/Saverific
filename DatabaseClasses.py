@@ -98,6 +98,7 @@ class EmailTypes(Enum):
     email_type_id = 'EMAIL_TYPE_ID'
     table = 'TABLE'
     is_email_html = 'IS_EMAIL_HTML'
+    transfer_type_id = 'TRANSFER_TYPE_ID'
 
 
 class ParseBanks(Enum):
@@ -161,3 +162,41 @@ class Transactions(Enum):
     amount = 'AMOUNT'
     merchant_name = 'MERCHANT_NAME'
     merchant_location = 'MERCHANT_LOCATION'
+
+
+class Transfers(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'TRANSFERS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['EMAIL_ID', 'TRANSFER_TYPE_ID', 'AMOUNT']
+
+    email_id = 'EMAIL_ID'
+    transfer_type_id = 'TRANSFER_TYPE_ID'
+    location = 'LOCATION'
+    amount = 'AMOUNT'
+
+
+class TransferTypes(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'TRANSFER_TYPES'
+
+    @classmethod
+    def auto_increments(cls):
+        return ['TRANSFER_TYPE_ID']
+
+    @classmethod
+    def not_nulls(cls):
+        return ['TYPE_NAME']
+
+    transfer_type_id = 'TRANSFER_TYPE_ID'
+    type_name = 'TYPE_NAME'

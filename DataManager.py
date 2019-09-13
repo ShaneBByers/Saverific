@@ -82,14 +82,18 @@ class DataManager:
                 for bank, bank_info in db_parse_dict.items():
                     email_text = email.text
                     DetailsTable = None
+                    transfer_type_id = None
                     for email_type in email_types:
                         if bank.get(ParseBanks.email_type_id) == email_type.get(EmailTypes.email_type_id):
                             if email_type.get(EmailTypes.is_email_html):
                                 email_text = email.html
+                                transfer_type_id = email_type.get(EmailTypes.transfer_type_id)
                             if email_type.get(EmailTypes.table) == Transactions.table_name():
                                 DetailsTable = Transactions
                             elif email_type.get(EmailTypes.table) == Balances.table_name():
                                 DetailsTable = Balances
+                            elif email_type.get(EmailTypes.table) == Transfers.table_name():
+                                DetailsTable = Transfers
                             break
 
                     account = None
@@ -118,6 +122,10 @@ class DataManager:
                             db_email.set(Emails.email_type_id, bank.get(ParseBanks.email_type_id))
 
                             db_email_details = DBEntity(DetailsTable)
+
+                            if DetailsTable is Transfers:
+                                db_email_details.set(Transfers.transfer_type_id, transfer_type_id)
+
                             limit = None
                             for component in bank_info:
                                 if component.get(ParseComponents.name) == Accounts.credit_limit.value:
