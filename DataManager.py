@@ -1,6 +1,6 @@
 import logging
 import datetime
-import DatabaseManager
+from ..DatabaseManager import DatabaseManager
 import Constants
 from EmailDataManager import EmailDataManager
 from Generated.DatabaseClasses import *
