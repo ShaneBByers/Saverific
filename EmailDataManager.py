@@ -1,4 +1,3 @@
-import html2text
 import logging
 from EmailConnector import EmailConnector
 

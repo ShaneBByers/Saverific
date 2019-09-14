@@ -1,31 +1,27 @@
 import logging
 import datetime
-from Constants import Constants
+import DatabaseManager
+import Constants
 from EmailDataManager import EmailDataManager
-from DatabaseDataManager import DatabaseDataManager
-from FileDataManager import FileDataManager
-from DatabaseEntity import DBEntity
-from DatabaseClasses import *
+from Generated.DatabaseClasses import *
 
 
 class DataManager:
 
     def __init__(self, logger_name):
         self.logger = logging.getLogger(logger_name)
-        self.db_manager = DatabaseDataManager(logger_name,
-                                              Constants.db_host.value,
-                                              Constants.db_username.value,
-                                              Constants.db_password.value,
-                                              Constants.db_name.value)
+        self.db_manager = DatabaseManager.connect(logger_name,
+                                                  Constants.DB_HOST,
+                                                  Constants.DB_USERNAME,
+                                                  Constants.DB_PASSWORD,
+                                                  Constants.DB_NAME)
         self.email_manager = EmailDataManager(logger_name,
-                                              Constants.email_host.value,
-                                              Constants.email_username.value,
-                                              Constants.email_password.value,
-                                              Constants.email_source_mailbox.value,
-                                              Constants.email_dest_mailbox.value,
-                                              Constants.email_error_mailbox.value)
-
-        self.file_manager = FileDataManager(logger_name)
+                                              Constants.EMAIL_HOST,
+                                              Constants.EMAIL_USERNAME,
+                                              Constants.EMAIL_PASSWORD,
+                                              Constants.EMAIL_SOURCE_MAILBOX,
+                                              Constants.EMAIL_DEST_MAILBOX,
+                                              Constants.EMAIL_ERROR_MAILBOX)
 
     @staticmethod
     def get_email_component(text, component):
@@ -45,13 +41,13 @@ class DataManager:
         return val
 
     def get_db_parse_info(self):
-        parse_banks_select = DBEntity(ParseBanks)
+        parse_banks_select = DatabaseManager.entity(ParseBanks)
         parse_banks = self.db_manager.select_all(parse_banks_select)
 
         parse_banks_dict = {}
 
         for parse_bank in parse_banks:
-            parse_components_select = DBEntity(ParseComponents)
+            parse_components_select = DatabaseManager.entity(ParseComponents)
             parse_components_select.add_where(ParseComponents.parse_id, parse_bank.get(ParseBanks.parse_id))
             parse_components = self.db_manager.select_all(parse_components_select)
             parse_banks_dict[parse_bank] = parse_components
@@ -59,7 +55,7 @@ class DataManager:
         return parse_banks_dict
 
     def get_db_accounts(self):
-        accounts_select = DBEntity(Accounts)
+        accounts_select = DatabaseManager.entity(Accounts)
         accounts = self.db_manager.select_all(accounts_select)
 
         return accounts
@@ -73,7 +69,7 @@ class DataManager:
         emails = self.get_unread_emails()
 
         if len(emails) > 0:
-            email_types_select = DBEntity(EmailTypes)
+            email_types_select = DatabaseManager.entity(EmailTypes)
             email_types = self.db_manager.select_all(email_types_select)
             db_parse_dict = self.get_db_parse_info()
             db_accounts = self.get_db_accounts()
@@ -102,7 +98,7 @@ class DataManager:
                         found_match = True
                         self.logger.info("Found email matching bank with ID " + str(bank.get(ParseBanks.bank_id)) + ".")
                         if DetailsTable is not None:
-                            db_email = DBEntity(Emails)
+                            db_email = DatabaseManager.entity(Emails)
                             for component in bank_info:
                                 if component.get(ParseComponents.name) == Accounts.account_number.value:
                                     last_four = self.get_email_component(email_text, component)
@@ -121,7 +117,7 @@ class DataManager:
 
                             db_email.set(Emails.email_type_id, bank.get(ParseBanks.email_type_id))
 
-                            db_email_details = DBEntity(DetailsTable)
+                            db_email_details = DatabaseManager.entity(DetailsTable)
 
                             if DetailsTable is Transfers:
                                 db_email_details.set(Transfers.transfer_type_id, transfer_type_id)
@@ -163,55 +159,3 @@ class DataManager:
                 if not found_match:
                     self.email_manager.move_email(email, True)
             self.db_manager.commit()
-
-    def update_classes_file(self):
-        table_info = self.db_manager.get_table_information()
-        self.file_manager.open(Constants.db_class_filename.value)
-        self.file_manager.write("from enum import Enum")
-        for table_name, columns in table_info.items():
-            self.file_manager.write_line(lines=3)
-            name_words = table_name.split('_')
-            name = ''
-            for name_word in name_words:
-                name += name_word.capitalize()
-            self.file_manager.write_line("class " + name + "(Enum):", lines=2)
-
-            self.file_manager.write_line("@classmethod", tabs=1)
-            self.file_manager.write_line("def table_name(cls):", tabs=1)
-            self.file_manager.write_line("return '" + table_name + "'", tabs=2, lines=2)
-
-            auto_increment_list = []
-            not_null_list = []
-            for column in columns:
-                if 'auto_increment' in column['Extra']:
-                    auto_increment_list.append(column['Field'])
-                elif 'NO' in column['Null']:
-                    not_null_list.append(column['Field'])
-
-            self.file_manager.write_line("@classmethod", tabs=1)
-            self.file_manager.write_line("def auto_increments(cls):", tabs=1)
-            self.file_manager.write("return [", tabs=2)
-
-            if len(auto_increment_list) > 0:
-                for column in auto_increment_list[:-1]:
-                    self.file_manager.write("'" + column + "', ")
-                else:
-                    self.file_manager.write("'" + auto_increment_list[-1] + "'")
-            self.file_manager.write_line("]", lines=2)
-
-            self.file_manager.write_line("@classmethod", tabs=1)
-            self.file_manager.write_line("def not_nulls(cls):", tabs=1)
-            self.file_manager.write("return [", tabs=2)
-
-            if len(not_null_list) > 0:
-                for column in not_null_list[:-1]:
-                    self.file_manager.write("'" + column + "', ")
-                else:
-                    self.file_manager.write("'" + not_null_list[-1] + "'")
-            self.file_manager.write_line("]")
-
-            for column in columns:
-                self.file_manager.write_line()
-                self.file_manager.write(column['Field'].lower() + " = '" + column['Field'] + "'", tabs=1)
-        self.file_manager.write_line()
-        self.file_manager.close()

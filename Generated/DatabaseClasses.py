@@ -180,8 +180,8 @@ class Transfers(Enum):
 
     email_id = 'EMAIL_ID'
     transfer_type_id = 'TRANSFER_TYPE_ID'
-    location = 'LOCATION'
     amount = 'AMOUNT'
+    location = 'LOCATION'
 
 
 class TransferTypes(Enum):

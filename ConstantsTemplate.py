@@ -1,14 +1,11 @@
-from enum import Enum
-
-
-class Constants(Enum):
-    email_host = ""
-    email_username = ""
-    email_password = ""
-    db_host = ""
-    db_username = ""
-    db_password = ""
-    db_name = ""
-    email_source_mailbox = ""
-    email_dest_mailbox = ""
-    email_error_mailbox = ""
+EMAIL_HOST = ""
+EMAIL_USERNAME = ""
+EMAIL_PASSWORD = ""
+EMAIL_SOURCE_MAILBOX = ""
+EMAIL_DEST_MAILBOX = ""
+EMAIL_ERROR_MAILBOX = ""
+DB_HOST = ""
+DB_USERNAME = ""
+DB_PASSWORD = ""
+DB_NAME = ""
+DB_CLASS_FILE_PATH = ""
