@@ -8,20 +8,28 @@ from Generated.DatabaseClasses import *
 
 class DataManager:
 
-    def __init__(self, logger_name):
+    def __init__(self, logger_name, db=True, email=True):
         self.logger = logging.getLogger(logger_name)
-        self.db_manager = database.connect(logger_name,
-                                           Constants.DB_HOST,
-                                           Constants.DB_USERNAME,
-                                           Constants.DB_PASSWORD,
-                                           Constants.DB_NAME)
-        self.email_manager = EmailDataManager(logger_name,
-                                              Constants.EMAIL_HOST,
-                                              Constants.EMAIL_USERNAME,
-                                              Constants.EMAIL_PASSWORD,
-                                              Constants.EMAIL_SOURCE_MAILBOX,
-                                              Constants.EMAIL_DEST_MAILBOX,
-                                              Constants.EMAIL_ERROR_MAILBOX)
+
+        if db:
+            self.db_manager = database.connect(logger_name,
+                                               Constants.DB_HOST,
+                                               Constants.DB_USERNAME,
+                                               Constants.DB_PASSWORD,
+                                               Constants.DB_NAME)
+        else:
+            self.db_manager = None
+
+        if email:
+            self.email_manager = EmailDataManager(logger_name,
+                                                  Constants.EMAIL_HOST,
+                                                  Constants.EMAIL_USERNAME,
+                                                  Constants.EMAIL_PASSWORD,
+                                                  Constants.EMAIL_SOURCE_MAILBOX,
+                                                  Constants.EMAIL_DEST_MAILBOX,
+                                                  Constants.EMAIL_ERROR_MAILBOX)
+        else:
+            self.email_manager = None
 
     @staticmethod
     def get_email_component(text, component):
