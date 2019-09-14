@@ -1,7 +1,7 @@
 import logging
 import datetime
-from ..DatabaseManager import DatabaseManager
 import Constants
+from database import database
 from EmailDataManager import EmailDataManager
 from Generated.DatabaseClasses import *
 
@@ -10,11 +10,11 @@ class DataManager:
 
     def __init__(self, logger_name):
         self.logger = logging.getLogger(logger_name)
-        self.db_manager = DatabaseManager.connect(logger_name,
-                                                  Constants.DB_HOST,
-                                                  Constants.DB_USERNAME,
-                                                  Constants.DB_PASSWORD,
-                                                  Constants.DB_NAME)
+        self.db_manager = database.connect(logger_name,
+                                           Constants.DB_HOST,
+                                           Constants.DB_USERNAME,
+                                           Constants.DB_PASSWORD,
+                                           Constants.DB_NAME)
         self.email_manager = EmailDataManager(logger_name,
                                               Constants.EMAIL_HOST,
                                               Constants.EMAIL_USERNAME,
@@ -41,13 +41,13 @@ class DataManager:
         return val
 
     def get_db_parse_info(self):
-        parse_banks_select = DatabaseManager.entity(ParseBanks)
+        parse_banks_select = database.entity(ParseBanks)
         parse_banks = self.db_manager.select_all(parse_banks_select)
 
         parse_banks_dict = {}
 
         for parse_bank in parse_banks:
-            parse_components_select = DatabaseManager.entity(ParseComponents)
+            parse_components_select = database.entity(ParseComponents)
             parse_components_select.add_where(ParseComponents.parse_id, parse_bank.get(ParseBanks.parse_id))
             parse_components = self.db_manager.select_all(parse_components_select)
             parse_banks_dict[parse_bank] = parse_components
@@ -55,7 +55,7 @@ class DataManager:
         return parse_banks_dict
 
     def get_db_accounts(self):
-        accounts_select = DatabaseManager.entity(Accounts)
+        accounts_select = database.entity(Accounts)
         accounts = self.db_manager.select_all(accounts_select)
 
         return accounts
@@ -69,7 +69,7 @@ class DataManager:
         emails = self.get_unread_emails()
 
         if len(emails) > 0:
-            email_types_select = DatabaseManager.entity(EmailTypes)
+            email_types_select = database.entity(EmailTypes)
             email_types = self.db_manager.select_all(email_types_select)
             db_parse_dict = self.get_db_parse_info()
             db_accounts = self.get_db_accounts()
@@ -98,7 +98,7 @@ class DataManager:
                         found_match = True
                         self.logger.info("Found email matching bank with ID " + str(bank.get(ParseBanks.bank_id)) + ".")
                         if DetailsTable is not None:
-                            db_email = DatabaseManager.entity(Emails)
+                            db_email = database.entity(Emails)
                             for component in bank_info:
                                 if component.get(ParseComponents.name) == Accounts.account_number.value:
                                     last_four = self.get_email_component(email_text, component)
@@ -110,14 +110,16 @@ class DataManager:
                                     break
 
                             modified_date = email.date.split(' -', 1)[0].split(' +', 1)[0]
-                            email_date_time = datetime.datetime.strptime(modified_date, bank.get(ParseBanks.date_format))
+                            email_date_time = datetime.datetime.strptime(modified_date,
+                                                                         bank.get(ParseBanks.date_format))
                             if bank.get(ParseBanks.localize_date_time):
-                                email_date_time = email_date_time.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
+                                email_date_time = email_date_time.replace(tzinfo=datetime.timezone.utc).astimezone(
+                                    tz=None)
                             db_email.set(Emails.date_time, email_date_time)
 
                             db_email.set(Emails.email_type_id, bank.get(ParseBanks.email_type_id))
 
-                            db_email_details = DatabaseManager.entity(DetailsTable)
+                            db_email_details = database.entity(DetailsTable)
 
                             if DetailsTable is Transfers:
                                 db_email_details.set(Transfers.transfer_type_id, transfer_type_id)
@@ -159,3 +161,6 @@ class DataManager:
                 if not found_match:
                     self.email_manager.move_email(email, True)
             self.db_manager.commit()
+
+    def update_classes_file(self, file_name):
+        self.db_manager.update_classes_file(file_name)
